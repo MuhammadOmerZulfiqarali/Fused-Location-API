@@ -29,7 +29,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
-    private lateinit var tvGpsLocation: TextView
+    private lateinit var latitudeT: TextView
+    private lateinit var longitudeT: TextView
     private val locationPermissionCode = 1000
     private lateinit var mMap: GoogleMap
 
@@ -42,7 +43,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_main)
 
         // Initialize Views
-        tvGpsLocation = findViewById(R.id.textView)
+        latitudeT = findViewById(R.id.latitudeValue)
+        longitudeT = findViewById(R.id.longitudeValue)
 
         title = "Location App"
 
@@ -160,7 +162,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val formattedLat = "%.4f° $latDirection".format(Math.abs(latitude))
         val formattedLon = "%.4f° $lonDirection".format(Math.abs(longitude))
-
+        latitudeT.text = formattedLat
+        longitudeT.text = formattedLon
         return "Latitude: $formattedLat\nLongitude: $formattedLon"
     }
 
@@ -168,9 +171,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun onLocationChanged(location: Location) {
         Log.d("MainActivity", "Location changed: ${location.latitude}, ${location.longitude}")
 
+        val latitude = location.latitude
+        val longitude = location.longitude
         // Format and display the coordinates with directions
-        val formattedCoordinates = formatCoordinates(location.latitude, location.longitude)
-        tvGpsLocation.text = formattedCoordinates
+        val latDirection = if (latitude >= 0) "N" else "S"
+        val lonDirection = if (longitude >= 0) "E" else "W"
+
+        val formattedLat = "%.4f° $latDirection".format(Math.abs(latitude))
+        val formattedLon = "%.4f° $lonDirection".format(Math.abs(longitude))
+        latitudeT.text = formattedLat
+        longitudeT.text = formattedLon
+//        val formattedCoordinates = formatCoordinates(location.latitude, location.longitude)
+//        tvGpsLocation.text = formattedCoordinates
 
         // Update Map with current location
         if (::mMap.isInitialized) {
