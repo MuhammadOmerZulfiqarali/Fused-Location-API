@@ -150,39 +150,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         )
     }
 
-    /**
-     * Formats the latitude and longitude with directional indicators.
-     * For example:
-     * Latitude: 37.7749° N
-     * Longitude: 122.4194° W
-     */
-    private fun formatCoordinates(latitude: Double, longitude: Double): String {
-        val latDirection = if (latitude >= 0) "N" else "S"
-        val lonDirection = if (longitude >= 0) "E" else "W"
-
-        val formattedLat = "%.4f° $latDirection".format(Math.abs(latitude))
-        val formattedLon = "%.4f° $lonDirection".format(Math.abs(longitude))
-        latitudeT.text = formattedLat
-        longitudeT.text = formattedLon
-        return "Latitude: $formattedLat\nLongitude: $formattedLon"
-    }
-
     @SuppressLint("SetTextI18n")
     private fun onLocationChanged(location: Location) {
         Log.d("MainActivity", "Location changed: ${location.latitude}, ${location.longitude}")
 
         val latitude = location.latitude
         val longitude = location.longitude
-        // Format and display the coordinates with directions
-        val latDirection = if (latitude >= 0) "N" else "S"
-        val lonDirection = if (longitude >= 0) "E" else "W"
+        val currentTime = System.currentTimeMillis()
 
-        val formattedLat = "%.4f° $latDirection".format(Math.abs(latitude))
-        val formattedLon = "%.4f° $lonDirection".format(Math.abs(longitude))
-        latitudeT.text = formattedLat
-        longitudeT.text = formattedLon
-//        val formattedCoordinates = formatCoordinates(location.latitude, location.longitude)
-//        tvGpsLocation.text = formattedCoordinates
+        // Save to Room Database
+        CoroutineScope(Dispatchers.IO).launch {
+            val lastLocation = AppDatabase.getDatabase(this@MainActivity).locationDao().getLastLocation()
+            if (lastLocation == null || (currentTime - lastLocation.timestamp) > 180000) {
+                // Save new location if no location exists or 3 minutes have passed
+                val newLocation = LocationEntity(
+                    latitude = latitude,
+                    longitude = longitude,
+                    timestamp = currentTime
+                )
+                AppDatabase.getDatabase(this@MainActivity).locationDao().insertLocation(newLocation)
+
+                withContext(Dispatchers.Main) {
+                    formatCoordinates(latitude, longitude)
+                }
+            } else {
+                // Use the last saved location if it is less than 3 minutes old
+                withContext(Dispatchers.Main) {
+                    formatCoordinates(lastLocation.latitude, lastLocation.longitude)
+                }
+            }
+        }
 
         // Update Map with current location
         if (::mMap.isInitialized) {
@@ -195,6 +192,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             )
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15f))
         }
+    }
+
+    private fun formatCoordinates(latitude: Double, longitude: Double) {
+        val latDirection = if (latitude >= 0) "N" else "S"
+        val lonDirection = if (longitude >= 0) "E" else "W"
+
+        val formattedLat = "%.4f° $latDirection".format(Math.abs(latitude))
+        val formattedLon = "%.4f° $lonDirection".format(Math.abs(longitude))
+        latitudeT.text = formattedLat
+        longitudeT.text = formattedLon
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -257,11 +264,5 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Remove location updates to prevent memory leaks
-        stopLocationUpdates()
     }
 }
