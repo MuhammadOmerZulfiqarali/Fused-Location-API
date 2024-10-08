@@ -12,4 +12,15 @@ interface LocationDao {
 
     @Query("SELECT * FROM location_table ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLastLocation(): LocationEntity?
+
+    @Query("SELECT * FROM location_table ORDER BY timestamp DESC")
+    suspend fun getAllLocations(): List<LocationEntity>
+
+
 }
+
+
+
+
+
+
